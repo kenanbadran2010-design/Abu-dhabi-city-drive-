@@ -53,6 +53,36 @@ func _make_car(paint: Color) -> Node3D:
         _box(v, "Taillight", Vector3(x * 0.7, 0.95, 2.24), Vector3(0.45, 0.22, 0.08), Color(0.9, 0.1, 0.1))
     return v
 
+func _load_osm() -> void:
+    # Replace the placeholder city with real OSM road and building geometry.
+    for child in get_children():
+        if child is MeshInstance3D and (child.name.begins_with("North south road") or child.name.begins_with("East west road") or child.name.begins_with("Center line") or child.name.begins_with("Cross center line") or child.name.begins_with("City tower") or child.name.begins_with("Glass windows") or child.name.begins_with("Palm trunk") or child.name.begins_with("Palm leaves")):
+            child.queue_free()
+    var road_file := FileAccess.open("res://roads.csv", FileAccess.READ)
+    if road_file != null:
+        while not road_file.eof_reached():
+            var line := road_file.get_csv_line()
+            if line.size() < 5:
+                continue
+            var a := Vector2(float(line[0]), float(line[1]))
+            var b := Vector2(float(line[2]), float(line[3]))
+            var segment := b - a
+            var length := segment.length()
+            if length < 2.0:
+                continue
+            var road := _box(self, "OSM actual road", Vector3((a.x+b.x)*0.5, 0.13, (a.y+b.y)*0.5), Vector3(float(line[4]), 0.11, length+1.5), Color(0.14,0.16,0.18))
+            road.rotation.y = atan2(-segment.x,-segment.y)
+        road_file.close()
+    var building_file := FileAccess.open("res://buildings.csv", FileAccess.READ)
+    if building_file != null:
+        while not building_file.eof_reached():
+            var line := building_file.get_csv_line()
+            if line.size() < 5:
+                continue
+            var h := float(line[4])
+            _box(self, "OSM building footprint", Vector3(float(line[0]),h*0.5,float(line[1])),Vector3(float(line[2]),h,float(line[3])),Color(0.59,0.72,0.77))
+        building_file.close()
+
 func _ready() -> void:
     var light := DirectionalLight3D.new()
     light.rotation_degrees = Vector3(-50, -25, 0)
@@ -79,6 +109,8 @@ func _ready() -> void:
             _box(self, "City tower", Vector3(xx - 16, h * 0.5, zz - 15), Vector3(18, h, 20), Color(0.62 + float(n % 3) * 0.08, 0.72, 0.78))
             _box(self, "Glass windows", Vector3(xx - 16, h * 0.5, zz - 4.9), Vector3(13, h * 0.8, 0.18), Color(0.24, 0.45, 0.56))
             _palm(xx + 20, zz + 20)
+    if FileAccess.file_exists("res://roads.csv"):
+        _load_osm()
     car = _make_car(Color(0.86, 0.11, 0.08))
     car.position = Vector3(0, 0, 50)
     for i in range(14):
