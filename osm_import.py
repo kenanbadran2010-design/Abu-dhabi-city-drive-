@@ -1,13 +1,13 @@
 import csv,json,math,re,time,urllib.parse,urllib.request
 from pathlib import Path
 root=Path(__file__).resolve().parent
-s,w,n,e=24.457,54.344,24.494,54.390
+s,w,n,e=24.466,54.355,24.480,54.373
 lat0,lon0=(s+n)/2,(w+e)/2
 mlon=111320*math.cos(math.radians(lat0))
 q=f'[out:json][timeout:150];(way[highway~"^(motorway|trunk|primary|secondary|tertiary|residential|unclassified|service|living_street|pedestrian|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link)$"]({s},{w},{n},{e});way[building]({s},{w},{n},{e});node[amenity][name]({s},{w},{n},{e});node[tourism][name]({s},{w},{n},{e}););out geom;'
 def xy(p): return ((p['lon']-lon0)*mlon,-(p['lat']-lat0)*111132)
 data=None
-for url in ['https://overpass.kumi.systems/api/interpreter','https://overpass-api.de/api/interpreter','https://overpass.nchc.org.tw/api/interpreter']:
+for url in ['https://overpass.private.coffee/api/interpreter','https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']:
  try:
   req=urllib.request.Request(url,data=urllib.parse.urlencode({'data':q}).encode(),headers={'User-Agent':'AbuDhabiCityDrive-OSMImporter/1.0'})
   with urllib.request.urlopen(req,timeout=180) as resp:data=json.load(resp)
@@ -32,7 +32,7 @@ for el in data['elements']:
   buildings.append((round((min(xs)+max(xs))/2,2),round((min(zs)+max(zs))/2,2),round(dx,2),round(dz,2),round(max(3,min(height,180)),1)))
  elif el['type']=='node' and tags.get('name') and ('amenity' in tags or 'tourism' in tags):
   x,z=xy(el);places.append((round(x,2),round(z,2),tags['name'].replace(',',' ').replace('\n',' ')[:60]))
-if len(roads)<100 or len(buildings)<50:raise RuntimeError(f'Incomplete OSM download: {len(roads)} roads {len(buildings)} buildings')
+if len(roads)<15 or len(buildings)<10:raise RuntimeError(f'Incomplete OSM download: {len(roads)} roads {len(buildings)} buildings')
 for name,rows in [('roads.csv',roads[:5000]),('buildings.csv',buildings[:2000]),('places.csv',places[:200])]:
  with (root/name).open('w',newline='',encoding='utf8') as f:csv.writer(f).writerows(rows)
 print(f'OSM imported: {len(roads)} road segments, {len(buildings)} buildings, {len(places)} places',flush=True)
