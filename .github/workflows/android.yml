@@ -51,6 +51,12 @@ jobs:
           export/android/debug_keystore_pass = "android"
           EOF
 
+      - name: Download real Abu Dhabi OpenStreetMap geometry
+        run: |
+          python3 osm_import.py
+          test -s roads.csv
+          test -s buildings.csv
+
       - name: Import Godot project
         run: godot --headless --editor --path . --quit
 
