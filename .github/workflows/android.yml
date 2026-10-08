@@ -1,8 +1,9 @@
-
 name: Build Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
 
 jobs:
   build:
@@ -11,21 +12,38 @@ jobs:
       - name: Checkout project
         uses: actions/checkout@v4
 
-      - name: Install Godot
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform and build tools
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Create Android debug signing key
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Install Godot and export templates
         uses: chickensoft-games/setup-godot@v2
         with:
           version: 4.4.1
           use-dotnet: false
           include-templates: true
 
-      - name: Import project
+      - name: Import Godot project
         run: godot --headless --editor --path . --quit
 
-      - name: Export Android APK
+      - name: Export debug APK
         run: |
           mkdir -p build
-          godot --headless --path . \
-            --export-debug "Android" build/AbuDhabiCityDrive.apk
+          godot --headless --path . --export-debug "Android" build/AbuDhabiCityDrive.apk
+          test -s build/AbuDhabiCityDrive.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
