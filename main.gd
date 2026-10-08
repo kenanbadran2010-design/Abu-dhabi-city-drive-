@@ -91,9 +91,9 @@ func _button(ui: Control, title: String, anchor: Vector2, dimensions: Vector2, a
     b.button_up.connect(func(): set(action, false))
 
 func _physics_process(delta: float) -> void:
-    var throttle: float = float(accelerate or Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP))
-    var braking: float = float(brake or Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN))
-    var steering: float = float(right or Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) - float(left or Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT))
+    var throttle: float = 1.0 if (accelerate or Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP)) else 0.0
+    var braking: float = 1.0 if (brake or Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)) else 0.0
+    var steering: float = (1.0 if (right or Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)) else 0.0) - (1.0 if (left or Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)) else 0.0)
     speed = move_toward(speed, throttle * 28.0 - braking * 9.0, delta * (12.0 if throttle or braking else 6.0))
     car.rotate_y(-steering * delta * speed * 0.025)
     car.position += -car.global_transform.basis.z * speed * delta
