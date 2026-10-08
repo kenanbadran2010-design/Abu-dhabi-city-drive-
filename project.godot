@@ -1,0 +1,15 @@
+; Engine configuration file.
+; Abu Dhabi City Drive - first playable prototype
+config_version=5
+
+[application]
+config/name="Abu Dhabi City Drive"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.4", "GL Compatibility")
+config/description="Abu Dhabi driving prototype"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+environment/defaults/default_clear_color=Color(0.59, 0.78, 0.94, 1)
