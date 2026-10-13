@@ -24,14 +24,23 @@ jobs:
           npm run build
           npx cap add android
           npx cap sync android
-      - name: Allow OSM requests
-        run: |
-          sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET" /><application|' android/app/src/main/AndroidManifest.xml
+          test -f android/gradlew
+          test -f android/app/src/main/AndroidManifest.xml
       - name: Build debug APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          test -s app/build/outputs/apk/debug/app-debug.apk
+      - name: Show build diagnostics if failed
+        if: failure()
+        run: |
+          echo '=== Android project ==='
+          ls -la android 2>/dev/null || true
+          echo '=== APK outputs ==='
+          find android -name '*.apk' -o -name '*.log' 2>/dev/null | head -30 || true
+          echo '=== package versions ==='
+          npm ls @capacitor/core @capacitor/android vite three --depth=0 || true
       - uses: actions/upload-artifact@v4
         with:
           name: AbuDhabiDrive-APK
