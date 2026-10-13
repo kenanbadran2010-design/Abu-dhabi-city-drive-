@@ -21,56 +21,37 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
           log-accepted-android-sdk-licenses: false
-      - name: Install dependencies and build 3D game
+      - name: Install and bundle real Abu Dhabi map
         run: |
           npm install --no-audit --no-fund
           python3 scripts/bundle_osm.py
+          test -s public/maps/downtown.json
           npm run build
           test -s dist/maps/downtown.json
           npx cap add android
           npx cap sync android
-          test -f android/gradlew
-          test -f android/app/src/main/AndroidManifest.xml
-      - name: Build debug APK
+      - name: Build Android debug APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
           test -s app/build/outputs/apk/debug/app-debug.apk
-      - name: Verify APK signature and bundled game
+      - name: Verify APK and city data
         run: |
+          set -e
           apk=android/app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk"
-          unzip -t "$apk"
+          unzip -t "$apk" >/dev/null
           unzip -Z1 "$apk" | grep -Fx 'assets/public/index.html'
-          unzip -Z1 "$apk" | grep -E '^assets/public/assets/.*\.js
-          sha256sum "$apk"
-      - name: Show build diagnostics if failed
-        if: failure()
-        run: |
-          echo '=== Android project ==='
-          ls -la android 2>/dev/null || true
-          echo '=== APK outputs ==='
-          find android -name '*.apk' -o -name '*.log' 2>/dev/null | head -30 || true
-          echo '=== package versions ==='
-          npm ls @capacitor/core @capacitor/android vite three --depth=0 || true
-      - uses: actions/upload-artifact@v4
-        with:
-          name: AbuDhabiDrive-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-
+          unzip -Z1 "$apk" | grep -F 'assets/public/assets/'
           unzip -Z1 "$apk" | grep -Fx 'assets/public/maps/downtown.json'
           sha256sum "$apk"
-      - name: Show build diagnostics if failed
+      - name: Show diagnostics if failed
         if: failure()
         run: |
-          echo '=== Android project ==='
-          ls -la android 2>/dev/null || true
-          echo '=== APK outputs ==='
+          echo '=== Android outputs ==='
           find android -name '*.apk' -o -name '*.log' 2>/dev/null | head -30 || true
-          echo '=== package versions ==='
+          echo '=== npm modules ==='
           npm ls @capacitor/core @capacitor/android vite three --depth=0 || true
       - uses: actions/upload-artifact@v4
         with:
