@@ -1,72 +1,39 @@
-name: Build Android APK
-
+name: Build Abu Dhabi Android APK
 on:
-  workflow_dispatch:
   push:
     branches: [main]
-
+  workflow_dispatch:
 jobs:
-  build:
+  apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-
-      - name: Install Java
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-
-      - name: Configure Android SDK
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Install dependencies and build 3D game
         run: |
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-
-      - name: Create Android debug signing key
+          npm install --no-audit --no-fund
+          npm run build
+          npx cap add android
+          npx cap sync android
+      - name: Allow OSM requests
         run: |
-          mkdir -p "$HOME/.android"
-          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-
-      - name: Install Godot and export templates
-        uses: chickensoft-games/setup-godot@v2
+          sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET" /><application|' android/app/src/main/AndroidManifest.xml
+      - name: Build debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
         with:
-          version: 4.4.1
-          use-dotnet: false
-          include-templates: true
-
-      - name: Configure Godot Android editor settings
-        run: |
-          mkdir -p "$HOME/.config/godot"
-          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
-          [gd_resource type="EditorSettings" format=3]
-
-          [resource]
-          export/android/android_sdk_path = "$ANDROID_SDK_ROOT"
-          export/android/java_sdk_path = "$JAVA_HOME"
-          export/android/debug_keystore = "$HOME/.android/debug.keystore"
-          export/android/debug_keystore_user = "androiddebugkey"
-          export/android/debug_keystore_pass = "android"
-          EOF
-
-      - name: Download real Abu Dhabi OpenStreetMap geometry
-        run: |
-          python3 osm_import.py || echo 'WARNING: Map download unavailable; exporting prototype without OSM layer.'
-          if [ -s roads.csv ] && [ -s buildings.csv ]; then echo 'Real OSM data included'; else echo 'No real OSM data; this build uses prototype roads'; fi
-
-      - name: Import Godot project
-        run: godot --headless --editor --path . --quit
-
-      - name: Export debug APK
-        run: |
-          mkdir -p build
-          godot --headless --path . --export-debug "Android" build/AbuDhabiCityDrive.apk
-          test -s build/AbuDhabiCityDrive.apk
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: AbuDhabiCityDrive-Android
-          path: build/AbuDhabiCityDrive.apk
+          name: AbuDhabiDrive-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
