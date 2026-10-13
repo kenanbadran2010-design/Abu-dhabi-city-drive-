@@ -28,7 +28,7 @@ for server in SERVERS:
                 "Content-Type": "application/x-www-form-urlencoded",
             },
         )
-        with urllib.request.urlopen(req, timeout=115) as response:
+        with urllib.request.urlopen(req, timeout=40) as response:
             data = json.load(response)
         elements = [
             element for element in data.get("elements", [])
