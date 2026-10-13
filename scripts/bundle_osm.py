@@ -28,7 +28,7 @@ for server in SERVERS:
                 "Content-Type": "application/x-www-form-urlencoded",
             },
         )
-        with urllib.request.urlopen(req, timeout=40) as response:
+        with urllib.request.urlopen(req, timeout=17) as response:
             data = json.load(response)
         elements = [
             element for element in data.get("elements", [])
@@ -52,7 +52,8 @@ else:
     import sys
     import tempfile
     print("Using independent Geofabrik OSM extract fallback", flush=True)
-    subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "osmium"], check=True)
+    subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "--target", "/tmp/abu-osm-packages", "osmium==4.3.1"], check=True)
+    sys.path.insert(0, "/tmp/abu-osm-packages")
     import osmium
     with tempfile.TemporaryDirectory() as directory:
         pbf = pathlib.Path(directory) / "gcc-states.osm.pbf"
