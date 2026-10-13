@@ -18,6 +18,9 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+          log-accepted-android-sdk-licenses: false
       - name: Install dependencies and build 3D game
         run: |
           npm install --no-audit --no-fund
@@ -32,6 +35,28 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
           test -s app/build/outputs/apk/debug/app-debug.apk
+      - name: Verify APK signature and bundled game
+        run: |
+          apk=android/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk"
+          unzip -t "$apk"
+          unzip -Z1 "$apk" | grep -Fx 'assets/public/index.html'
+          unzip -Z1 "$apk" | grep -E '^assets/public/assets/.*\.js        if: failure()
+        run: |
+          echo '=== Android project ==='
+          ls -la android 2>/dev/null || true
+          echo '=== APK outputs ==='
+          find android -name '*.apk' -o -name '*.log' 2>/dev/null | head -30 || true
+          echo '=== package versions ==='
+          npm ls @capacitor/core @capacitor/android vite three --depth=0 || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AbuDhabiDrive-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+          sha256sum "$apk"
       - name: Show build diagnostics if failed
         if: failure()
         run: |
